@@ -3,15 +3,14 @@ import NProgress from 'nprogress'
 import { base } from '~/service/config'
 import type { ResType } from './types'
 
-axios.defaults.baseURL = `${base}/api/v1`
+axios.defaults.baseURL = `${base}/api`
 axios.defaults.timeout = 10000
 axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8'
 
 axios.interceptors.request.use(
   (config): AxiosRequestConfig<any> => {
     // replace this with your own getting token method eg: from localStorage
-    const token =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwicGFzc3dvcmQiOiJhZG1pbiIsImV4cCI6MTcyMTQ3MzE4MSwiaXNzIjoibm9ib2R5In0.a561GV0sXwWVHFMmheCuhinQt2g_gTL5V5nfuvZJDTU'
+    const token = localStorage.getItem('Token')
     if (token) {
       // @ts-ignore
       config.headers.Authorization = `bearer ${token}`
@@ -22,7 +21,7 @@ axios.interceptors.request.use(
     return error
   }
 )
-// 响应拦截
+
 axios.interceptors.response.use(
   (res) => {
     return res
@@ -32,6 +31,7 @@ axios.interceptors.response.use(
       const code = error.response.status
       if (code === 401) {
         // do something here maybe remove user token and redirect to login page
+        localStorage.removeItem('Token')
       }
       return error.response
     }

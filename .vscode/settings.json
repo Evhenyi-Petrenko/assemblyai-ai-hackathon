@@ -11,6 +11,11 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": ["source.fixAll.eslint"]
+  "editor.codeActionsOnSave": [
+    "source.fixAll.eslint"
+  ],
+  "i18n-ally.localesPaths": [
+    "locales"
+  ]
   // ...
 }

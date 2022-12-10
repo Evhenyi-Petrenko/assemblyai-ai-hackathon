@@ -16,21 +16,26 @@
     "forceConsistentCasingInFileNames": true,
     "types": [
       "vitest",
-      "cypress",
       "vue/ref-macros",
       "vite/client",
       "vite-plugin-pages/client",
       "vite-plugin-vue-layouts/client"
     ],
     "paths": {
-      "~/*": ["src/*"]
+      "~/*": [
+        "src/*"
+      ]
     },
-    "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "scripthost"
+    ]
   },
   "exclude": [
     "dist",
     "node_modules",
-    "cypress",
     "build",
     "scripts",
     "postcss.config.js",

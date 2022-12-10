@@ -4,7 +4,7 @@ import { ILoginApi } from './types'
 
 const authApi: ILoginApi = {
   LOGIN(params) {
-    return http.post('/auth/login', params)
+    return http.post('/login', params)
   },
 }
 
