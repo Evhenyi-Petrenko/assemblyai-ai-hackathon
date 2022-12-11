@@ -43,6 +43,7 @@ export default {
       audioFromHash: null,
       timeStamp: null,
       audioNotYetUpload: null,
+      playerTime: null,
     }
   },
 
@@ -63,7 +64,11 @@ export default {
         this.getListAudio()
       })
   },
-
+  watch: {
+    playerTime() {
+      this.$refs.plyr.player.currentTime = this.playerTime / 1000
+    },
+  },
   computed: {
     parseRaw() {
       return JSON.parse(this.audioFromHash.raw)
@@ -108,9 +113,12 @@ export default {
       })
     },
     watchTime() {
-      this.$refs.plyr.player.on(
-        'timeupdate',
-        () => (this.timeStamp = this.$refs.plyr.player.currentTime)
+      setTimeout(
+        this.$refs.plyr.player.on(
+          'timeupdate',
+          () => (this.timeStamp = this.$refs.plyr.player.currentTime)
+        ),
+        1000
       )
     },
     onChange($e) {
@@ -186,6 +194,10 @@ export default {
       axios.get('/audio/' + hash).then((response) => {
         this.audioFromHash = response.data
       })
+    },
+    updTime(time) {
+      this.playerTime = time
+      this.timeStamp = time / 1000
     },
   },
 }
@@ -267,7 +279,7 @@ export default {
                         ? 'translated__backlight'
                         : null,
                     ]"
-                    @click="translateActions(item)"
+                    @click="updTime(item.start)"
                   >
                     {{ item.text }}
                   </div>
@@ -282,7 +294,7 @@ export default {
         </div>
       </div>
       <vue-plyr class="player" ref="plyr">
-        <audio debug controls crossorigin playsinline>
+        <audio debug controls crossorigin playsinline @playing="watchTime()">
           <source :src="audioFromHash.mp3_path" type="audio/mp3" />
         </audio>
       </vue-plyr>
