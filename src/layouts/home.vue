@@ -39,7 +39,10 @@ export default {
         audio: '',
         nameAudio: '',
       },
-      selectAudio: '',
+      selectAudio: null,
+      audioFromHash: null,
+      timeStamp: null,
+      audioNotYetUpload: null,
     }
   },
 
@@ -60,11 +63,55 @@ export default {
         this.getListAudio()
       })
   },
+
+  computed: {
+    parseRaw() {
+      return JSON.parse(this.audioFromHash.raw)
+    },
+    paragraphs() {
+      let paragraphs = []
+      let size = 0
+
+      this.parseRaw.forEach((element) => {
+        if (element.text === null) {
+          element.text = ' '
+        }
+
+        if (paragraphs[size]) {
+          paragraphs[size].push(element)
+        } else {
+          paragraphs[size] = [element]
+        }
+
+        if (element.text.endsWith('.')) {
+          size++
+        }
+      })
+
+      return paragraphs
+    },
+  },
+
   methods: {
+    getTimeStartSentences(startSentenceMS) {
+      const timeM = Math.floor(startSentenceMS / 60000)
+      const timeS = ((startSentenceMS % 60000) / 1000).toFixed(0)
+
+      const mm = +timeM < 10 ? `0${timeM}` : timeM
+      const ss = +timeS < 10 ? `0${timeS}` : timeS
+
+      return `${mm}:${ss}`
+    },
     getListAudio() {
       axios.get('/audio?workspace_id=OBKdv8qb&per_page=100').then((response) => {
         this.audios = response.data.data
       })
+    },
+    watchTime() {
+      this.$refs.plyr.player.on(
+        'timeupdate',
+        () => (this.timeStamp = this.$refs.plyr.player.currentTime)
+      )
     },
     onChange($e) {
       this.uploadData.nameAudio = this.$refs.file.files[0].name
@@ -135,61 +182,110 @@ export default {
           })
       }
     },
+    GoToAudio(hash) {
+      axios.get('/audio/' + hash).then((response) => {
+        this.audioFromHash = response.data
+      })
+    },
   },
 }
 </script>
 <template>
   <main class="container">
     <h1 class="text-xl mt-6">Upload your audio or choose from the list</h1>
-    <div class="form-input form-input-for-chrome py-4 px-0">
-      <input class="name" type="text" v-model="uploadData.nameAudio" />
-      <label>Audio Name</label>
+    <div v-if="!audioFromHash">
+      <div class="form-input form-input-for-chrome py-4 px-0">
+        <input class="name" type="text" v-model="uploadData.nameAudio" />
+        <label>Audio Name </label>
+      </div>
+      <div class="upload-form">
+        <label
+          for="uploadFile"
+          class="upload-file-box"
+          @drop.prevent="onDrag"
+          @dragenter.prevent
+          @dragleave.prevent="dragleave"
+          @dragover.prevent="dragover"
+        >
+          <div
+            ref="stateBox"
+            class="state-box"
+            :class="[uploadData.audio ? 'is-file' : 'no-file']"
+          ></div>
+          <input
+            id="uploadFile"
+            ref="file"
+            type="file"
+            name="file"
+            accept=".x-wav,.mp3,.ogg,.mp4,audio/*"
+            @change="onChange"
+          />
+
+          <div class="text-drop-1">
+            <button class="btn btn-dark">Choose a file</button>
+            or drag & drop here…
+          </div>
+
+          <div class="name-file">
+            {{ uploadData.nameAudio }}
+          </div>
+
+          <div class="text-drop-2">Works with .mp3, .ogg & .mp4. Max size 100MB!</div>
+        </label>
+
+        <button
+          class="btn btn-dark"
+          type="submit"
+          :disabled="audioNotYetUpload"
+          @keyup.enter="submit"
+          @click="submit"
+        >
+          Continue
+        </button>
+      </div>
     </div>
+    <div v-else>
+      <div class="translated px-3">
+        <div class="d-flex">
+          <div>
+            <div
+              v-for="(paragraph, id) in paragraphs"
+              :key="id"
+              ref="translated__paragraph"
+              class="translated__paragraph"
+            >
+              <p class="translated__time new">
+                {{ getTimeStartSentences(paragraph[0].start) }}
+              </p>
 
-    <div class="upload-form">
-      <label
-        for="uploadFile"
-        class="upload-file-box"
-        @drop.prevent="onDrag"
-        @dragenter.prevent
-        @dragleave.prevent="dragleave"
-        @dragover.prevent="dragover"
-      >
-        <div
-          ref="stateBox"
-          class="state-box"
-          :class="[uploadData.audio ? 'is-file' : 'no-file']"
-        ></div>
-        <input
-          id="uploadFile"
-          ref="file"
-          type="file"
-          name="file"
-          accept=".x-wav,.mp3,.ogg,.mp4,audio/*"
-          @change="onChange"
-        />
+              <div ref="translated__wraps" class="translated__wraps">
+                <div v-for="(item, i) in paragraph" :key="i" class="translated__wrap">
+                  <div
+                    class="translated__text"
+                    :class="[
+                      item.start / 1000 <= timeStamp && item.end / 1000 >= timeStamp
+                        ? 'translated__backlight'
+                        : null,
+                    ]"
+                    @click="translateActions(item)"
+                  >
+                    {{ item.text }}
+                  </div>
+                </div>
 
-        <div class="text-drop-1">
-          <button class="btn btn-dark">Choose a file</button>
-          or drag & drop here…
+                <div v-if="paragraph[0].speaker" class="translated__speaker">
+                  [{{ paragraph[0].speaker }}]
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div class="name-file">
-          {{ uploadData.nameAudio }}
-        </div>
-
-        <div class="text-drop-2">Works with .mp3, .ogg & .mp4. Max size 100MB!</div>
-      </label>
-
-      <button
-        class="btn btn-dark"
-        type="submit"
-        :disabled="audioNotYetUpload"
-        @keyup.enter="submit"
-        @click="submit"
-      >
-        Continue
-      </button>
+      </div>
+      <vue-plyr class="player" ref="plyr">
+        <audio debug controls crossorigin playsinline>
+          <source :src="audioFromHash.mp3_path" type="audio/mp3" />
+        </audio>
+      </vue-plyr>
     </div>
 
     <div class="audio__wrap mt-4">
@@ -198,7 +294,7 @@ export default {
         :key="item.hash"
         class="audio__block"
         :class="`audio__block-${item.status}`"
-        @click="item.status === 'in_progress' ? '' : GoToAudio(item)"
+        @click="item.status === 'in_progress' ? '' : GoToAudio(item.hash)"
       >
         <div class="audio__content">
           <div class="audio__content_count">{{ i + 1 }}</div>
@@ -245,7 +341,7 @@ export default {
   </main>
 </template>
 
-<style scoped>
+<style>
 h1 {
   font-size: 40px;
   text-align: center;
@@ -898,5 +994,155 @@ h1 {
 }
 .audio__block .audio__content .popup.show {
   display: flex;
+}
+.translated {
+  max-height: 80vh;
+  overflow: scroll;
+  background-color: #fff;
+}
+.translated__wrap {
+  display: flex;
+}
+.translated__time {
+  color: #807e7e;
+  font-size: 16px;
+}
+.translated__time.new {
+  margin: 0;
+  margin-right: 1rem;
+  padding: 0;
+  line-height: 2.2;
+}
+.translated__text {
+  border: solid 1px rgba(0, 0, 0, 0.0001);
+  color: #212121;
+  font-size: 16px;
+  font-weight: 400;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.translated__time {
+  color: #807e7e;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+.translated__time.new {
+  margin: 0;
+  margin-right: 1rem;
+  padding: 0;
+}
+.translated__text {
+  color: #212121;
+  font-size: 16px;
+  font-weight: 400;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.translated__paragraph {
+  display: flex;
+}
+.translated__paragraph:last-child {
+  margin-bottom: 0;
+}
+.translated__wraps {
+  display: flex;
+  flex-wrap: wrap;
+  line-height: 2.2;
+}
+@media screen and (max-width: 576px) {
+  .translated__wraps {
+    line-height: 2;
+  }
+}
+.translated__backlight {
+  border-radius: 7px;
+  background-color: #ffe7aa;
+}
+.translated__edit {
+  border-radius: 7px;
+  border: solid 1px #e7e8e9;
+  background-color: rgba(216, 216, 216, 0.2);
+}
+.translated__toolbar {
+  position: absolute;
+  left: 0;
+  bottom: -30px;
+  width: 100%;
+  border-radius: 0 0 10px 10px;
+  padding: 0 24px;
+  background-color: #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.translated__toolbar .translated__time.new {
+  font-size: 12px;
+  border-radius: 8px;
+  border: solid 1px #dedede;
+  line-height: 1.5;
+  padding: 0 10px;
+  height: 22px;
+}
+.translated__toolbar .translated__paragraph {
+  align-items: center;
+}
+.translated__toolbar_newword {
+  border-radius: 7px;
+  border: solid 1px #f8e6cb;
+  background-color: #fdf4e6;
+  padding: 0 12px;
+}
+.translated__speaker {
+  font-size: 14px;
+  font-weight: 600;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.71;
+  letter-spacing: normal;
+  color: #ee7a3e;
+  position: relative;
+  cursor: pointer;
+}
+.translated__speaker_full {
+  width: max-content;
+  z-index: 100;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 38px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  background-color: #212121;
+  color: #fff;
+}
+.translated__speaker_A {
+  color: #ee7a3e;
+}
+.translated__speaker_B {
+  color: #dc34dc;
+}
+.translated__speaker_C {
+  color: #1073e6;
+}
+.translated__speaker_D {
+  color: #dcf4cf;
+}
+.translated__speaker_D {
+  color: #fdf4e6;
+}
+.translated__confidence {
+  font-size: 11px;
+}
+.translated__confidence_res {
+  color: #e96520;
+  margin-right: 6px;
+}
+.translated__confidence_text {
+  color: #8f919b;
+}
+.plyr {
+  z-index: 1000;
 }
 </style>
