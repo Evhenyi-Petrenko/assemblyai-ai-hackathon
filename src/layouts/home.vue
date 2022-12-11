@@ -34,11 +34,12 @@ export default {
     return {
       token: '',
       spaces: {},
-      audio: '',
+      audios: [],
       uploadData: {
         audio: '',
         nameAudio: '',
       },
+      selectAudio: '',
     }
   },
 
@@ -62,7 +63,7 @@ export default {
   methods: {
     getListAudio() {
       axios.get('/audio?workspace_id=OBKdv8qb&per_page=100').then((response) => {
-        this.spaces = response.data
+        this.audios = response.data.data
       })
     },
     onChange($e) {
@@ -93,6 +94,15 @@ export default {
     dragleave($e) {
       $e.currentTarget.classList.remove('is-file')
       $e.currentTarget.classList.remove('no-file')
+    },
+    getTimeStartSentence(startSentenceMS) {
+      const timeM = Math.round(startSentenceMS / 60)
+      const timeS = startSentenceMS % 60 !== 0 ? (startSentenceMS % 60).toFixed() : 0
+
+      const mm = +timeM < 10 ? `0${timeM}` : timeM
+      const ss = +timeS < 10 ? `0${timeS}` : timeS
+
+      return `${mm}:${ss}`
     },
     submit(e) {
       // if (this.uploadData.audio?.size > 104857600) {
@@ -130,7 +140,7 @@ export default {
 </script>
 <template>
   <main class="container">
-    <h1 class="text-xl mt-6">Try to upload audio</h1>
+    <h1 class="text-xl mt-6">Upload your audio or choose from the list</h1>
     <div class="form-input form-input-for-chrome py-4 px-0">
       <input class="name" type="text" v-model="uploadData.nameAudio" />
       <label>Audio Name</label>
@@ -182,7 +192,55 @@ export default {
       </button>
     </div>
 
-    <div class="audio__wrap"></div>
+    <div class="audio__wrap mt-4">
+      <div
+        v-for="(item, i) in audios"
+        :key="item.hash"
+        class="audio__block"
+        :class="`audio__block-${item.status}`"
+        @click="item.status === 'in_progress' ? '' : GoToAudio(item)"
+      >
+        <div class="audio__content">
+          <div class="audio__content_count">{{ i + 1 }}</div>
+          <div class="audio__content_title">{{ item.hash }}</div>
+          <div class="audio__content_part-header-title mob-version">
+            {{ item.title }}
+          </div>
+          <div class="audio__content_part-translation">
+            <div class="audio__content_part-header-title desc-version">
+              {{ item.title }}
+            </div>
+            <div class="audio__content_part-dsc">
+              <template v-if="item.status === 'in_progress'">
+                <div class="progress-blick">In progress...</div>
+              </template>
+              <template v-else-if="item.error !== null">
+                <div class="progress-blick">{{ item.error }}</div>
+              </template>
+              <template v-else>
+                {{ item.transcription }}
+              </template>
+            </div>
+          </div>
+          <div class="audio__content_info">
+            <div v-if="item.category != null" class="audio__content_category">
+              {{ item.category.name }}
+            </div>
+            <div v-else class="audio__content_category">Empty</div>
+            <div class="audio__content_plays-and-time">
+              <div class="audio__content_time">
+                {{ getTimeStartSentence(item.duration) }}
+              </div>
+              <span>•</span>
+              <div class="audio__content_plays">{{ item.plays }} plays</div>
+            </div>
+          </div>
+          <div class="audio__content_controll-panel">
+            <div class="audio__content_controll-panel-popup popup"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <router-view />
   </main>
 </template>
@@ -448,5 +506,397 @@ h1 {
   max-width: 500px;
   width: 100%;
   background-color: inherit;
+}
+.audio__wrap {
+  margin-bottom: 24px;
+  background: #fff;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.0698208);
+  border-radius: 8px;
+  overflow: hidden;
+}
+@media screen and (max-width: 576px) {
+  .audio__wrap {
+    background: transparent;
+    box-shadow: none;
+    border-radius: none;
+  }
+}
+.audio__block {
+  padding: 26px 30px 0 20px;
+  border-left: 3px solid transparent;
+  color: #52647c;
+  cursor: pointer;
+}
+@media screen and (max-width: 576px) {
+  .audio__block {
+    padding: 18px 18px 0;
+    border-left: none;
+    margin-bottom: 20px;
+    background: #fff;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.0698208);
+    border-radius: 8px;
+  }
+}
+.audio__block:hover {
+  background-color: rgba(0, 0, 0, 0.0698208);
+}
+.audio__block .audio__content {
+  padding: 0 0 22px 0;
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid #eaeaea;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content {
+    padding: 0 0 18px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    border-bottom: none;
+  }
+}
+.audio__block .audio__content-transcribed > *,
+.audio__block .audio__content-in_progress > *,
+.audio__block .audio__content-error > * {
+  padding: 8px;
+}
+.audio__block .audio__content_count {
+  width: 40px;
+  font-size: 14px;
+  font-weight: normal;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.71;
+  letter-spacing: normal;
+  color: #52647c;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_count {
+    display: none;
+  }
+}
+.audio__block .audio__content_title {
+  width: 122px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.71;
+  letter-spacing: normal;
+  color: #52647c;
+}
+@media screen and (max-width: 768px) {
+  .audio__block .audio__content_title {
+    display: none;
+  }
+}
+.audio__block .audio__content_category {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #807e7e;
+  display: none;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_category {
+    display: block;
+  }
+}
+.audio__block .audio__content_part-translation {
+  height: 100%;
+  flex: 1;
+  color: #212121;
+  font-weight: 600;
+  position: relative;
+}
+@media screen and (max-width: 992px) {
+  .audio__block .audio__content_part-translation {
+    margin-right: 20px;
+  }
+}
+@media screen and (max-width: 768px) {
+  .audio__block .audio__content_part-translation {
+    margin-right: 15px;
+    margin-left: 10px;
+  }
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_part-translation {
+    order: 6;
+    margin-right: 0;
+    margin-left: 0;
+  }
+}
+.audio__block .audio__content_part-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.71;
+  letter-spacing: normal;
+  color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 520px;
+}
+@media screen and (max-width: 1200px) {
+  .audio__block .audio__content_part-header-title {
+    max-width: 300px;
+  }
+}
+@media screen and (max-width: 992px) {
+  .audio__block .audio__content_part-header-title {
+    max-width: 200px;
+  }
+}
+@media screen and (max-width: 768px) {
+  .audio__block .audio__content_part-header-title {
+    max-width: 150px;
+  }
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_part-header-title {
+    display: none;
+  }
+}
+.audio__block .audio__content_part-header-title.mob-version {
+  font-size: 16px;
+  line-height: 1.75;
+  font-weight: 600;
+  max-width: 50%;
+  display: none;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_part-header-title.mob-version {
+    display: block;
+  }
+}
+.audio__block .audio__content_part-dsc {
+  font-size: 12px;
+  font-weight: 600;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.75;
+  letter-spacing: normal;
+  color: #807e7e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 520px;
+}
+@media screen and (max-width: 1200px) {
+  .audio__block .audio__content_part-dsc {
+    max-width: 300px;
+  }
+}
+@media screen and (max-width: 992px) {
+  .audio__block .audio__content_part-dsc {
+    max-width: 200px;
+  }
+}
+@media screen and (max-width: 768px) {
+  .audio__block .audio__content_part-dsc {
+    max-width: 150px;
+  }
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_part-dsc {
+    font-size: 14px;
+    line-height: 1.71;
+    color: #52647c;
+    max-width: 100%;
+    width: 100%;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: inherit;
+  }
+}
+.audio__block .audio__content_part-dots-end {
+  width: 20px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  right: -20px;
+  display: flex;
+  align-items: flex-end;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_part-dots-end {
+    display: none;
+  }
+}
+.audio__block .audio__content_info {
+  width: 100px;
+  flex: 1;
+  margin-right: 30px;
+}
+@media screen and (max-width: 768px) {
+  .audio__block .audio__content_info {
+    margin-right: 10px;
+    min-width: 45px;
+  }
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_plays-and-time {
+    display: flex;
+    align-items: center;
+  }
+}
+.audio__block .audio__content_plays-and-time span {
+  display: none;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_plays-and-time span {
+    display: block;
+    margin: 0 6px;
+    color: #807e7e;
+    font-size: 14px;
+  }
+}
+.audio__block .audio__content_time {
+  color: #212121;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.71;
+  text-align: right;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_time {
+    color: #807e7e;
+    font-weight: 500;
+  }
+}
+.audio__block .audio__content_plays {
+  color: #807e7e;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_plays {
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+.audio__block .audio__content_controll-panel {
+  color: #212121;
+  font-size: 14px;
+  line-height: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content_controll-panel {
+    position: absolute;
+    top: -12px;
+    right: 0;
+  }
+}
+.audio__block .audio__content_controll-panel .dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  transition: all 0.2s linear;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.audio__block .audio__content_controll-panel .dot img {
+  width: 100%;
+}
+.audio__block .audio__content_controll-panel .dot:hover {
+  background-color: #fff;
+  opacity: 0.7;
+}
+.audio__block .audio__content-in_progress {
+  border-left: 3px solid rgba(25, 134, 255, 0.6);
+}
+.audio__block .audio__content-error {
+  border-left: 3px solid rgba(255, 0, 0, 0.6);
+}
+.audio__block .audio__content__item {
+  white-space: nowrap;
+  overflow: hidden;
+  border: dashed 2px inherit;
+  padding: 5px;
+  text-overflow: ellipsis;
+}
+.audio__block .audio__content_progress-dots {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.audio__block .audio__content .popup {
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  box-shadow: 0px 2px 5px #000;
+  border-radius: 8px;
+  width: 84px;
+  height: 32px;
+  position: absolute;
+  top: 36px;
+  right: 0;
+  transition: all 0.5s;
+  display: none;
+}
+@media screen and (max-width: 576px) {
+  .audio__block .audio__content .popup {
+    top: 25px;
+  }
+}
+.audio__block .audio__content .popup__item {
+  padding: 8px 20px 8px 8px;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  color: #807e7e;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.audio__block .audio__content .popup__item:hover {
+  background-color: #e75b12;
+  border-color: #e75b12;
+  color: #fff;
+}
+.audio__block .audio__content .popup__item:hover svg {
+  fill: #fff;
+}
+.audio__block .audio__content .popup__item-icon {
+  display: flex;
+  margin-right: 6px;
+}
+.audio__block .audio__content .popup__item-icon svg {
+  fill: #807e7e;
+  width: 10px;
+}
+.audio__block .audio__content .popup.show {
+  display: flex;
 }
 </style>
