@@ -5,11 +5,12 @@ export const useAuthStore = defineStore('auth', () => {
   let token = ref('')
 
   function setToken(name: string) {
+    // @ts-ignore
     token = name
   }
 
   return {
-    setNewName,
+    setToken,
   }
 })
 

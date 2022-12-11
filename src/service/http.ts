@@ -1,8 +1,9 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import NProgress from 'nprogress'
-import { base, jwt } from '~/service/config'
+import { base } from '~/service/config'
 import type { ResType } from './types'
-
+import { useAuthStore } from '../stores/auth'
+const auth = useAuthStore()
 axios.defaults.baseURL = `${base}/api`
 axios.defaults.timeout = 10000
 axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8'
@@ -10,13 +11,12 @@ axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8'
 axios.interceptors.request.use(
   (config): AxiosRequestConfig<any> => {
     // replace this with your own getting token method eg: from localStorage
-
-    const token = jwt
-    if (token) {
+    // @ts-ignore
+    if (auth.token) {
       // @ts-ignore
-
       config.headers.Authorization = `bearer ${token}`
-      console.log(config)
+      // @ts-ignore
+      console.log(auth.token)
     }
     return config
   },

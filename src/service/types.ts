@@ -12,10 +12,7 @@ export interface Token {
 }
 
 export interface ResType<T> {
-  access_token: string
-  expires_in: number
-  refresh_token: string
-  token_type: string
+  response_token: object
 }
 
 export type PromiseResType<T> = Promise<ResType<T>>
