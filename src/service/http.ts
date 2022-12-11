@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import NProgress from 'nprogress'
-import { base } from '~/service/config'
+import { base, jwt } from '~/service/config'
 import type { ResType } from './types'
 
 axios.defaults.baseURL = `${base}/api`
@@ -10,10 +10,13 @@ axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8'
 axios.interceptors.request.use(
   (config): AxiosRequestConfig<any> => {
     // replace this with your own getting token method eg: from localStorage
-    const token = localStorage.getItem('Token')
+
+    const token = jwt
     if (token) {
       // @ts-ignore
+
       config.headers.Authorization = `bearer ${token}`
+      console.log(config)
     }
     return config
   },
@@ -31,7 +34,6 @@ axios.interceptors.response.use(
       const code = error.response.status
       if (code === 401) {
         // do something here maybe remove user token and redirect to login page
-        localStorage.removeItem('Token')
       }
       return error.response
     }

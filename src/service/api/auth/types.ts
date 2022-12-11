@@ -4,12 +4,14 @@ import { ResType } from '~/service/types'
 export type Role = 0 | 1 | 2
 
 export interface Token {
-  expire: number
-  jwt: string
+  access_token: string
+  expires_in: number
+  refresh_token: string
+  token_type: string
 }
 
 export interface ILoginParams {
-  username: string
+  email: string
   password: string | number
 }
 
@@ -21,5 +23,5 @@ export interface IUser {
 }
 
 export interface ILoginApi {
-  LOGIN: (params: ILoginParams) => Promise<ResType<IUser>>
+  LOGIN: (params: ILoginParams) => Promise<ResType<Token>>
 }

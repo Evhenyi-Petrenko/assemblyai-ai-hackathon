@@ -1,16 +1,7 @@
 <script setup lang="ts" name="IndexPage">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useUserStore } from '~/stores/user'
-import { isDark, toggleDark } from '~/composables'
-const user = useUserStore()
-const name = ref(user.savedName)
 
-const router = useRouter()
-const go = () => {
-  if (name.value) router.push(`/audio/${encodeURIComponent(name.value)}`)
-}
+import { isDark, toggleDark } from '~/composables'
 
 const { t } = useI18n()
 </script>

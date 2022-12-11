@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useHead } from '@vueuse/head'
 useHead({
-  title: 'Modern Vue',
-  meta: [{ name: 'description', content: 'Opinionated Vite Starter Template' }],
+  title: '3d head',
+  meta: [{ name: 'description', content: 'Waffly' }],
 })
 </script>
 

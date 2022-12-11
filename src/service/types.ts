@@ -5,14 +5,17 @@ export interface BaseModel {
 }
 
 export interface Token {
-  expire?: number
-  jwt: string
+  access_token: string
+  expires_in: number
+  refresh_token: string
+  token_type: string
 }
 
 export interface ResType<T> {
-  code: number
-  data: T
-  msg: string
+  access_token: string
+  expires_in: number
+  refresh_token: string
+  token_type: string
 }
 
 export type PromiseResType<T> = Promise<ResType<T>>

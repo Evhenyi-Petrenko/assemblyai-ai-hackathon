@@ -1,4 +1,3 @@
-// example api service
 import http from '~/service/http'
 import { ILoginApi } from './types'
 
