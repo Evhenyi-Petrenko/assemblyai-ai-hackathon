@@ -37,6 +37,7 @@ import { MeshoptDecoder } from '../jsm/libs/meshopt_decoder.module.js'
 import { RoomEnvironment } from '../jsm/environments/RoomEnvironment.js'
 import facecap from '../models/gltf/facecap.glb?url'
 import { GUI } from '../jsm/libs/lil-gui.module.min.js'
+import { set } from 'nprogress'
 axios.defaults.baseURL = `${base}/api`
 
 export default {
@@ -55,7 +56,8 @@ export default {
       audioNotYetUpload: null,
       playerTime: null,
       mixer: null,
-      gltf: null,
+      head: null,
+      itervalHead: null,
     }
   },
 
@@ -128,20 +130,20 @@ export default {
       })
     },
     watchTime() {
-      setTimeout(
+      setTimeout(() => {
         this.$refs.plyr.player.on(
           'timeupdate',
           () => (this.timeStamp = this.$refs.plyr.player.currentTime)
-        ),
-        1000
-      )
+        )
+        this.$refs.plyr.player.on('pause', () => this.closeMounse())
+        this.$refs.plyr.player.on('play', () => this.openMounse())
+      }, 1000)
     },
     onChange($e) {
       this.uploadData.nameAudio = this.$refs.file.files[0].name
       this.uploadData.audio = this.$refs.file.files[0]
       this.drawBoxSetFile($e)
     },
-
     onDrag($e) {
       this.uploadData.nameAudio = $e.dataTransfer.files[0].name
       this.uploadData.audio = $e.dataTransfer.files[0]
@@ -209,11 +211,25 @@ export default {
       axios.get('/audio/' + hash).then((response) => {
         this.audioFromHash = response.data
       })
-      this.mixer.clipAction(gltf.animations[0]).stop()
+      this.mixer.stopAllAction()
     },
+
     updTime(time) {
       this.playerTime = time
       this.timeStamp = time / 1000
+    },
+    closeMounse() {
+      this.head.morphTargetInfluences[36] = 0.2
+      this.head.morphTargetInfluences[33] = 0.1
+      clearInterval(this.itervalHead)
+    },
+    openMounse() {
+      this.head.morphTargetInfluences[36] = 0
+      this.head.morphTargetInfluences[33] = 0
+      this.itervalHead = setInterval(() => {
+        setTimeout(this.closeMounse, 500)
+        setTimeout(this.openMounse, 800)
+      }, 2000)
     },
     initTree() {
       const clock = new THREE.Clock()
@@ -253,29 +269,7 @@ export default {
           const animationsMap = new Map()
 
           GUI
-          const head = mesh.getObjectByName('mesh_2')
-          const influences = head.morphTargetInfluences
-
-          const gui = new GUI()
-          gui.close()
-
-          for (const [key, value] of Object.entries(head.morphTargetDictionary)) {
-            gui
-              .add(influences, value, 0, 1, 0.01)
-              .name(key.replace('blendShape1.', ''))
-              .listen(influences)
-          }
-          head.morphTargetInfluences[36] = 0
-          head.morphTargetInfluences[33] = 0
-          function closeMounse() {
-            head.morphTargetInfluences[36] = 0.2
-            head.morphTargetInfluences[33] = 0.1
-          }
-
-          function openMounse() {
-            head.morphTargetInfluences[36] = 0
-            head.morphTargetInfluences[33] = 0
-          }
+          this.head = mesh.getObjectByName('mesh_2')
         })
 
       const environment = new RoomEnvironment()
@@ -372,6 +366,11 @@ export default {
       </div>
     </div>
     <div v-else>
+      <vue-plyr class="player" ref="plyr">
+        <audio debug controls crossorigin playsinline @playing="watchTime()">
+          <source :src="audioFromHash.mp3_path" type="audio/mp3" />
+        </audio>
+      </vue-plyr>
       <div @click="audioFromHash = null" class="button_back">Back to Upload</div>
       <div class="translated px-3">
         <div class="d-flex">
@@ -395,6 +394,7 @@ export default {
                         ? 'translated__backlight'
                         : null,
                     ]"
+                    @change="test(1)"
                     @click="updTime(item.start)"
                   >
                     {{ item.text }}
@@ -409,11 +409,6 @@ export default {
           </div>
         </div>
       </div>
-      <vue-plyr class="player" ref="plyr">
-        <audio debug controls crossorigin playsinline @playing="watchTime()">
-          <source :src="audioFromHash.mp3_path" type="audio/mp3" />
-        </audio>
-      </vue-plyr>
     </div>
 
     <div class="audio__wrap mt-4">
