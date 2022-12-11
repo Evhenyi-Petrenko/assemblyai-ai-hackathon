@@ -257,6 +257,7 @@ export default {
       </div>
     </div>
     <div v-else>
+      <div @click="audioFromHash = null" class="button_back">Back to Upload</div>
       <div class="translated px-3">
         <div class="d-flex">
           <div>
@@ -1156,5 +1157,12 @@ h1 {
 }
 .plyr {
   z-index: 1000;
+}
+.button_back {
+  cursor: pointer;
+  margin-bottom: 14px;
+  background-color: #000;
+  color: #fff;
+  border-radius: 8px;
 }
 </style>
